@@ -3,16 +3,17 @@ const express = require('express');
 const router = express.Router() // creation du routeur
 // importation controleur
 const bookControl = require('../controllers/book')
+// importation middleware
 const auth = require('../middleware/auth')
-
+const multer = require('../middleware/multer-config')
 
 
 // liste des routes
 router.get('/', bookControl.getAllBooks);
 router.get('/:id', bookControl.getOneBook);
 
-router.post('/',auth, bookControl.addOneBook);
-router.put('/:id',auth, bookControl.updateOneBook);
+router.post('/',auth, multer, bookControl.addOneBook);
+router.put('/:id',auth, multer, bookControl.updateOneBook);
 router.delete('/:id',auth, bookControl.delateOneBook);
 router.post('/:id/rating', auth, bookControl.postRatting);
 

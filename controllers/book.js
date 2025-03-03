@@ -49,13 +49,19 @@ exports.getOneBook = (req, res, next) => {
  * Réponse : { message: String } Verb
  */
 exports.addOneBook = (req, res, next) => {
-    delete req.body._id;
-    const book = new Book({
-      ...req.body
-    })
-    book.save()
-    .then(() => res.status(201).json({ message: "Livre ajouté !" }) )
-    .catch(error => res.status(400).json({error}))
+  const bookObject = JSON.parse(req.body.book)
+  delete bookObject._id // pour le supprimer ci un id est rajouter 
+  delete bookObject._userId // pour le supprimer ci un id est rajouter
+  const book = new Book({ 
+    ...bookObject,
+    userId: req.auth.userId,
+    imageUrl:`${req.protocol}://${req.get('host')}/image/${req.file.filename}`
+  })
+
+  book.save()
+  .then(() => {res.status(201).json({message:'livre ajouté'})})
+  .catch(error => {res.status(400).json( error.message )})
+ 
 }
 
 /** Met à jour le livre avec l'_id fourni. Si une image est téléchargée, 
@@ -71,11 +77,26 @@ exports.addOneBook = (req, res, next) => {
  * Body : EITHER Book as JSON OR { book: string, image: file }
  * Réponse : { message: String }
  */
-exports.updateOneBook = (req, res, next) => {
-    Book.updateOne({ _id: req.params.id}, {...req.body, _id:req.params.id})
-    .then(book => res.status(200).json("Modificaction reussie"))
-    .catch(error => res.status(400).json({error}))
-}
+exports.updateOneBook = (req, res, next) => { 
+  const bookObject = req.file ? {
+    ...JSON.parse(req.body.book),
+    imageUrl:`${req.protocol}://${req.get('host')}/image/${req.file.filename}`
+  } : { ...req.body }
+
+  delete bookObject._userId // pour le supprimer ci un id est rajouter
+ 
+  Book.findOne({ _id: req.params.id})
+  .then((book) => {
+    if(book.userId != req.auth.userId){
+      res.status("401").json({message : 'not autorized'})
+    } else {
+      book.updateOne({...bookObject, _id: req.params.id})
+      .then(res.status("200").json({message : 'livre modifié'}))
+      .catch(error => {res.status("400").json(error.message)})
+    }
+  })
+  .catch(error => {res.status("401").json(error.message)})
+} 
 
 /** Supprime le livre avec l'_id fourni ainsi que l’image associée.
  * Methode : DELETE

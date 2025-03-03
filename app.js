@@ -1,6 +1,7 @@
 // Importation des modules nécessaires
 const express = require('express');
 const mongoose = require('mongoose');
+const path = require('path');
 
 // Importation des routes
 const booksRoutes = require('./routes/books');
@@ -27,5 +28,6 @@ app.use((req, res, next) => {
 
 app.use('/api/books', booksRoutes); // chemin vers le router Books
 app.use('/api/auth', userRoutes) // chemin vers le router Auth
+app.use('/image', express.static(path.join(__dirname, 'image'))); //chemin vers le dossier
 
 module.exports = app;
