@@ -24,7 +24,6 @@ exports.getAllBooks = (req, res, next) => {
  */
 exports.getOneBook = (req, res, next) => {
     Book.findOne({ _id: req.params.id})
-    
     .then(book => {
       /* mongoose renvoie null avec status 200 quand on tente de recupere un livre supprimer.
       Solution: tester book*/
@@ -35,7 +34,6 @@ exports.getOneBook = (req, res, next) => {
         res.status(200).json(book)
       }
     })
-     
     .catch(error => res.status(400).json({error}))
 }
 
@@ -87,9 +85,17 @@ exports.updateOneBook = (req, res, next) => {
  * Réponse : { message: String }
  */
 exports.delateOneBook = (req, res, next) => {
-    Book.deleteOne({_id: req.params.id})
+  Book.findOne({ _id: req.params.id})
+  .then(book => {
+    if(!book){ // Si book est null, on renvoie un erreur 400
+      res.status(400).json({ error: "Ce livre a deja était supprimer" });
+    }
+    book.deleteOne()
     .then(book => res.status(200).json("Suppression reussie"))
     .catch(error => res.status(400).json({error}))
+
+  })
+  .catch(error => res.status(400).json({error}))
 }
 
 /** Définit la note pour le user ID fourni. La note doit être comprise entre 0 et 5.
