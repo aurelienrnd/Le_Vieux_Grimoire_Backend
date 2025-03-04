@@ -1,3 +1,5 @@
+// import modules
+const fs = require('fs');
 // importation des model
 const Book = require('../models/book');
 
@@ -52,6 +54,8 @@ exports.addOneBook = (req, res, next) => {
   const bookObject = JSON.parse(req.body.book)
   delete bookObject._id // pour le supprimer ci un id est rajouter 
   delete bookObject._userId // pour le supprimer ci un id est rajouter
+  
+  console.log(req.auth.userId)
   const book = new Book({ 
     ...bookObject,
     userId: req.auth.userId,
@@ -111,10 +115,19 @@ exports.delateOneBook = (req, res, next) => {
     if(!book){ // Si book est null, on renvoie un erreur 400
       res.status(400).json({ error: "Ce livre a deja était supprimer" });
     }
-    book.deleteOne()
-    .then(book => res.status(200).json("Suppression reussie"))
-    .catch(error => res.status(400).json({error}))
 
+    console.log(book.userId, req.auth.userId)
+    if(book.userId != req.auth.userId) {
+      res.status(401).json('not authorized')
+    } else {
+      const delateFile = book.imageUrl.split('/image/')[1]
+      console.log(delateFile)
+      fs.unlink(`image/${delateFile}`, () => {
+        book.deleteOne()
+        .then(book => res.status(200).json("Suppression reussie"))
+        .catch(error => res.status(400).json({error}))
+      })
+    }
   })
   .catch(error => res.status(400).json({error}))
 }

@@ -55,7 +55,8 @@ exports.getOneUser = (req, res, next) => {
             'TOKEN-DE-TEST',
             {expiresIn: '24h'}
           )
-        });
+        }
+      )
     })
     .catch(error => res.status(402).json(error.message))
   })
