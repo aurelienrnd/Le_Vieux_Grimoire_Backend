@@ -51,21 +51,20 @@ exports.getOneBook = (req, res, next) => {
  * Réponse : { message: String } Verb
  */
 exports.addOneBook = (req, res, next) => {
-  const bookObject = JSON.parse(req.body.book)
-  delete bookObject._id // pour le supprimer ci un id est rajouter 
-  delete bookObject._userId // pour le supprimer ci un id est rajouter
+  const reqObject = JSON.parse(req.body.book)
+  delete reqObject._id // pour le supprimer ci un id est rajouter 
+  delete reqObject._userId // pour le supprimer ci un id est rajouter
   
-  console.log(req.auth.userId)
+
   const book = new Book({ 
-    ...bookObject,
+    ...reqObject,
     userId: req.auth.userId,
     imageUrl:`${req.protocol}://${req.get('host')}/image/${req.file.filename}`
   })
-
+  
   book.save()
   .then(() => {res.status(201).json({message:'livre ajouté'})})
   .catch(error => {res.status(400).json( error.message )})
- 
 }
 
 /** Met à jour le livre avec l'_id fourni. Si une image est téléchargée, 

@@ -12,8 +12,8 @@ const multer = require('../middleware/multer-config')
 router.get('/', bookControl.getAllBooks);
 router.get('/:id', bookControl.getOneBook);
 
-router.post('/',auth, multer, bookControl.addOneBook);
-router.put('/:id',auth, multer, bookControl.updateOneBook);
+router.post('/',auth, multer.uploadMiddleware, multer.uploadImage ,bookControl.addOneBook);
+router.put('/:id',auth, multer.uploadMiddleware, multer.uploadImage, bookControl.updateOneBook);
 router.delete('/:id',auth, bookControl.delateOneBook);
 router.post('/:id/rating', auth, bookControl.postRatting);
 

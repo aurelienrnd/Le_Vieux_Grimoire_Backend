@@ -11,8 +11,8 @@ const bookSchema = mongoose.Schema({
   genre:{type: String, required: true}, // genre du livre
   ratings: [
     {
-        userId:{type: String}, // identifiant MongoDB unique de l'utilisateur qui a noté le livre
-        grade: {type: Number} // note donnée à un livre
+      userId:{type: String}, // identifiant MongoDB unique de l'utilisateur qui a noté le livre
+      grade: {type: Number} // note donnée à un livre
     } // note moyenne du livre
   ]
 });

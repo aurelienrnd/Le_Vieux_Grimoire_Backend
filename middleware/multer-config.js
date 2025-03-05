@@ -1,24 +1,40 @@
-//Import modules
-const multer = require('multer');
+// Import des modules
+const multer = require("multer");
+const sharp = require("sharp");
+const path = require("path");
+const fs = require("fs");
 
-//tableaux des diférente extention pour les images
-const MIME_TYPES = {
-  'image/jpg': 'jpg',
-  'image/jpeg': 'jpg',
-  'image/png': 'png'
-};
+// Stocker en mémoire (RAM)
+const memoryStorage = multer.memoryStorage(); // crée un espace de stockage temporaire
+const upload = multer({ storage: memoryStorage }); // indique multer dois utiliser le memoryStorage
+exports.uploadMiddleware = upload.single('image') // ajoute le file contenent le champ image au memoryStorage
 
-// config multer
-const storage = multer.diskStorage({
-  destination: (req, file, callback) => {
-    callback(null, 'image'); // indique ou enregistrer les fichiers
-  },
+exports.uploadImage = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).send("Aucun fichier envoyé !");
+    }
 
-  filename: (req, file, callback) => {
-    const name = file.originalname.split(' ').join('_'); //supression des espace dans le non du fichier
-    const extension = MIME_TYPES[file.mimetype]; // determine l'extenssion a utiliser
-    callback(null, name + Date.now() + '.' + extension); // ccreation du nom du fichier
+    const uploadDir = path.resolve(__dirname, "../image/")
+    const originaFileName = req.file.originalname.split(" ").join("_").split(".")[0]
+    const newFileName = `${Date.now()}-${originaFileName}.webp`
+    req.file.filename = newFileName
+    const filePath = path.join(uploadDir, newFileName)
+
+    fs.mkdir(uploadDir, { recursive: true }, (error) => {
+      if (error){
+        return console.error(error);
+      }
+      console.log("dossier crée")
+    })
+
+    await sharp(req.file.buffer)
+      // TODO sizing
+      .toFormat("webp")
+      .toFile(filePath)
+    next()
+
+  } catch (error) {
+    res.status(500).send(error.message );
   }
-});
-
-module.exports = multer({storage: storage}).single('image');
+};cd 
