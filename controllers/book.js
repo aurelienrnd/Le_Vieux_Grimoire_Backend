@@ -12,7 +12,6 @@ const Book = require('../models/book');
  */
 exports.getAllBooks = (req, res, next) => {
   Book.find()
-
   .then(books => res.status(200).json(books))
   .catch(error => res.status(400).json({error}))
 }
@@ -25,18 +24,17 @@ exports.getAllBooks = (req, res, next) => {
  * Réponse : Single book 
  */
 exports.getOneBook = (req, res, next) => {
-    Book.findOne({ _id: req.params.id})
-    .then(book => {
-      /* mongoose renvoie null avec status 200 quand on tente de recupere un livre supprimer.
-      Solution: tester book*/
-      if(!book){ // Si book est null, on renvoie un erreur 404
-        res.status(404).json({ error: "Ce livre a était supprimer" });
+  // Utilisation du paramaitre de la requette pour retrouver un livre
+  Book.findOne({ _id: req.params.id})
+  .then(book => {
+    /* mongoose renvoie null avec status 200 quand on tente de recupere un livre supprimer. Solution: tester book*/
+    if(!book){
+      return res.status(404).json({ error: "Ce livre a était supprimer" });
+    }
 
-      } else { // Autrement on le renvoie avec un status 200
-        res.status(200).json(book)
-      }
-    })
-    .catch(error => res.status(400).json({error}))
+    res.status(200).json(book)
+  })
+  .catch(error => res.status(400).json({error}))
 }
 
 /** Capture et enregistre l'image, analyse le livre transformé en chaîne de caractères, 
@@ -51,19 +49,19 @@ exports.getOneBook = (req, res, next) => {
  * Réponse : { message: String } Verb
  */
 exports.addOneBook = (req, res, next) => {
-  const reqObject = JSON.parse(req.body.book)
-  delete reqObject._id // pour le supprimer ci un id est rajouter 
-  delete reqObject._userId // pour le supprimer ci un id est rajouter
+  const reqData = JSON.parse(req.body.book)
+  delete reqData._id // pour le supprimer ci un id est rajouter 
+  delete reqData._userId // pour le supprimer ci un id est rajouter
   
-
+  // Creet un nouvelle objet book avec userId et imageUrl ajours
   const book = new Book({ 
-    ...reqObject,
+    ...reqData,
     userId: req.auth.userId,
     imageUrl:`${req.protocol}://${req.get('host')}/image/${req.file.filename}`
   })
   
   book.save()
-  .then(() => {res.status(201).json({message:'livre ajouté'})})
+  .then(() => res.status(201).json({message:'livre ajouté'}))
   .catch(error => {res.status(400).json( error.message )})
 }
 
@@ -80,25 +78,29 @@ exports.addOneBook = (req, res, next) => {
  * Body : EITHER Book as JSON OR { book: string, image: file }
  * Réponse : { message: String }
  */
-exports.updateOneBook = (req, res, next) => { 
-  const bookObject = req.file ? {
-    ...JSON.parse(req.body.book),
-    imageUrl:`${req.protocol}://${req.get('host')}/image/${req.file.filename}`
-  } : { ...req.body }
+exports.updateOneBook = (req, res, next) => {
+  // Recupaire la requette contenant les element a modifier
+  const dataUpdate = req.file ? {
+      ...JSON.parse(req.body.book),
+      imageUrl: `${req.protocol}://${req.get('host')}/image/${req.file.filename}`,
+  } : {
+      ...req.body,
+  };
 
-  delete bookObject._userId // pour le supprimer ci un id est rajouter
- 
-  Book.findOne({ _id: req.params.id})
-  .then((book) => {
-    if(book.userId != req.auth.userId){
-      res.status("401").json({message : 'not autorized'})
-    } else {
-      book.updateOne({...bookObject, _id: req.params.id})
-      .then(res.status("200").json({message : 'livre modifié'}))
-      .catch(error => {res.status("400").json(error.message)})
+  // Recupaire le livre corespondant au params.id dans la base de donnais
+  Book.findOne({ _id: req.params.id })
+  .then(book => {
+
+    // Si le livre n'est pas trouvé alors je retourne une erreur
+    if (!book) {
+      return res.status(404).json({ message: "Livre non trouvé" });
     }
+
+    // Je modifie les données contenue dans book
+    return Book.updateOne({ _id: req.params.id }, { ...dataUpdate })
   })
-  .catch(error => {res.status("401").json(error.message)})
+  .then( res.status(200).json({ message: "Livre modifié" }))
+  .catch(error => { res.status(500).json({ error: error.message })});
 } 
 
 /** Supprime le livre avec l'_id fourni ainsi que l’image associée.
@@ -109,24 +111,28 @@ exports.updateOneBook = (req, res, next) => {
  * Réponse : { message: String }
  */
 exports.delateOneBook = (req, res, next) => {
+  // Utilisation du paramaitre de la requette pour retrouver un livre
   Book.findOne({ _id: req.params.id})
   .then(book => {
-    if(!book){ // Si book est null, on renvoie un erreur 400
+
+    // Si book est null, on renvoie un erreur 400
+    if(!book){ 
       res.status(400).json({ error: "Ce livre a deja était supprimer" });
     }
 
-    console.log(book.userId, req.auth.userId)
+    // verifie que le user Id du livre est le meme que celuis de la requette
     if(book.userId != req.auth.userId) {
-      res.status(401).json('not authorized')
-    } else {
-      const delateFile = book.imageUrl.split('/image/')[1]
-      console.log(delateFile)
-      fs.unlink(`image/${delateFile}`, () => {
-        book.deleteOne()
-        .then(book => res.status(200).json("Suppression reussie"))
-        .catch(error => res.status(400).json({error}))
-      })
+      return res.status(401).json('not authorized')
     }
+
+    // Supprime le livre
+    const delateFile = book.imageUrl.split('/image/')[1]
+    fs.unlink(`image/${delateFile}`, () => {
+      book.deleteOne()
+      .then(res.status(200).json("Suppression reussie"))
+      .catch(error => res.status(400).json({error}))
+    })
+    
   })
   .catch(error => res.status(400).json({error}))
 }
@@ -143,11 +149,27 @@ exports.delateOneBook = (req, res, next) => {
  * Réponse : Single book
  */
 exports.postRatting =  (req, res, next) => {
-    console.log('requette envoyer')
-    console.log(req.body);
-          
-    res.status(200).json("Single book");
+  console.log('requette envoyer')
+  // Utilisation du paramaitre de la requette pour retrouver un livre 
+  Book.findOne({ _id: req.params.id})
+  .then(book => {
+
+    // Si le livre n'est pas trouvé alors je retourne une erreur
+    if (!book) {
+      return res.status(400).json({ message: "Livre non trouvé" });
+    } 
+    console.log('livre trouvé')
+
+    book.ratings.push({ userId : req.body.userId, grade : req.body.rating})
+    console.log({ userId : req.body.userId, grade : req.body.rating});
+    
+    book.save()
+    .then(book => res.status(200).json(book))
+    .catch(error => res.status(400).json({error}))
+  })
+  .catch(error => res.status(401).json({error}))
 }
+
 
 /** Renvoie un tableau des 3 livres de la base de données ayant la meilleure note moyenne.
  * Methode : GET 
@@ -160,3 +182,9 @@ exports.getBestRatting = (req, res, next) => {
     console.log('requette envoyer')
     res.status(200).json(["Array of books"]);
 }
+
+
+
+
+
+
