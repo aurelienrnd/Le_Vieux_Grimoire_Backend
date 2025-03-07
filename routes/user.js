@@ -1,12 +1,12 @@
-// Importation des modules nécessaires
+// import modules
 const express = require('express');
-// importation controler
+// import controleurs
 const userControl = require('../controllers/user');
 
 
 const router = express.Router() // creation du routeur
 
-// liste routes
+// Liste routes
 router.post('/signup', userControl.addOneUser);
 router.post('/login', userControl.getOneUser);
 
