@@ -2,6 +2,8 @@
 const fs = require('fs');
 // importation des model
 const Book = require('../models/book');
+const book = require('../models/book');
+
 
 /** Renvoie un tableau de tous les livres de la base de données.
  * Methode : GET 
@@ -16,6 +18,7 @@ exports.getAllBooks = (req, res, next) => {
   .catch(error => res.status(400).json({error}))
 }
 
+
 /** Renvoie le livre avec l’_id fourni.
  * Methode : GET 
  * Point d'accès : /api/books/:id 
@@ -24,12 +27,14 @@ exports.getAllBooks = (req, res, next) => {
  * Réponse : Single book 
  */
 exports.getOneBook = (req, res, next) => {
+
   // Utilisation du paramaitre de la requette pour retrouver un livre
   Book.findOne({ _id: req.params.id})
   .then(book => {
-    /* mongoose renvoie null avec status 200 quand on tente de recupere un livre supprimer. Solution: tester book*/
+
+    /* Si le livre n'existe pas, on retourne une erreur 404*/
     if(!book){
-      return res.status(404).json({ error: "Ce livre a était supprimer" });
+      return res.status(404).json({ error: "Ce livre n'existe pas" });
     }
 
     res.status(200).json(book)
@@ -37,7 +42,8 @@ exports.getOneBook = (req, res, next) => {
   .catch(error => res.status(400).json({error}))
 }
 
-/** Capture et enregistre l'image, analyse le livre transformé en chaîne de caractères, 
+
+/** Capture et enregistre l'image analyse le livre transformé en chaîne de caractères, 
   l'enregistre dans la base de données en définissant correctement son ImageUrl.
   Initialise la note moyenne du livre à 0 et le rating avec un tableau vide. 
   Remarquez que le corps de la demande initiale est vide ; lorsque Multer est ajouté, 
@@ -52,8 +58,10 @@ exports.addOneBook = (req, res, next) => {
   const reqData = JSON.parse(req.body.book)
   delete reqData._id // pour le supprimer ci un id est rajouter 
   delete reqData._userId // pour le supprimer ci un id est rajouter
+
+  // Le createur du livre peut t'il notées le livre qu'il vien de creer?
   
-  // Creet un nouvelle objet book avec userId et imageUrl ajours
+  // Creet un nouvelle objet book avec userId et imageUrl a jours
   const book = new Book({ 
     ...reqData,
     userId: req.auth.userId,
@@ -64,6 +72,7 @@ exports.addOneBook = (req, res, next) => {
   .then(() => res.status(201).json({message:'livre ajouté'}))
   .catch(error => {res.status(400).json( error.message )})
 }
+
 
 /** Met à jour le livre avec l'_id fourni. Si une image est téléchargée, 
   elle est capturée, et l’ImageUrl du livre est mise à jour. 
@@ -103,6 +112,7 @@ exports.updateOneBook = (req, res, next) => {
   .catch(error => { res.status(500).json({ error: error.message })});
 } 
 
+
 /** Supprime le livre avec l'_id fourni ainsi que l’image associée.
  * Methode : DELETE
  * Point d'accès : /api/books/:id
@@ -111,6 +121,7 @@ exports.updateOneBook = (req, res, next) => {
  * Réponse : { message: String }
  */
 exports.delateOneBook = (req, res, next) => {
+
   // Utilisation du paramaitre de la requette pour retrouver un livre
   Book.findOne({ _id: req.params.id})
   .then(book => {
@@ -137,11 +148,12 @@ exports.delateOneBook = (req, res, next) => {
   .catch(error => res.status(400).json({error}))
 }
 
+
 /** Définit la note pour le user ID fourni. La note doit être comprise entre 0 et 5.
-  L'ID de l'utilisateur et la note doivent être ajoutés au tableau "rating" 
-  afin de ne pas laisser un utilisateur noter deux fois le même livre.
-  Il n’est pas possible de modifier une note.
-  La note moyenne "averageRating" doit être tenue à jour, et le livre renvoyé en réponse de la requête.
+ L'ID de l'utilisateur et la note doivent être ajoutés au tableau "rating" 
+ Afin de ne pas laisser un utilisateur noter deux fois le même livre il 
+ n’est pas possible de modifier une note.
+ La note moyenne "averageRating" doit être tenue à jour, et le livre renvoyé en réponse de la requête.
  * Methode : POST
  * Point d'accès : /api/books/:id/rating
  * Authentification : Requis
@@ -149,7 +161,7 @@ exports.delateOneBook = (req, res, next) => {
  * Réponse : Single book
  */
 exports.postRatting =  (req, res, next) => {
-  console.log('requette envoyer')
+
   // Utilisation du paramaitre de la requette pour retrouver un livre 
   Book.findOne({ _id: req.params.id})
   .then(book => {
@@ -157,12 +169,29 @@ exports.postRatting =  (req, res, next) => {
     // Si le livre n'est pas trouvé alors je retourne une erreur
     if (!book) {
       return res.status(400).json({ message: "Livre non trouvé" });
-    } 
-    console.log('livre trouvé')
+    }
 
-    book.ratings.push({ userId : req.body.userId, grade : req.body.rating})
-    console.log({ userId : req.body.userId, grade : req.body.rating});
+    // Comparaison chaque userId du tableaux ratings au userId de la requette
+    book.ratings.forEach(rating => {
+      if(rating.userId === req.auth.userId) {
+        return res.status(400).json({ message: "L'utilisateur a deja noté ce livre" });
+      }
+    })
     
+    // Si la note est comprise entre  0 et 5 alors on la rajoute a book
+    if(req.body.rating > 0 && req.body.rating < 5){
+      book.ratings.push({ userId : req.body.userId, grade : req.body.rating})
+    } else {
+      return res.status(400).json("La note doit être comprise entre 0 et 5")
+    }
+
+    // Recupereration de chaque note du livre pour en faire la moyenne est arondie
+    let index = 0
+    book.ratings.forEach(rating => {
+      index += rating.grade
+    });
+    book.averageRating = parseFloat((index / book.ratings.length).toFixed(2))
+
     book.save()
     .then(book => res.status(200).json(book))
     .catch(error => res.status(400).json({error}))
@@ -179,8 +208,17 @@ exports.postRatting =  (req, res, next) => {
  * Réponse : Array of books
  */
 exports.getBestRatting = (req, res, next) => {
-    console.log('requette envoyer')
-    res.status(200).json(["Array of books"]);
+
+  // recupaire la liste de livre
+  Book.find()
+
+  // Trie la liste de livre est decoupe les 3 premier elements
+  .then(books => {
+    const booksList = [...books].sort((a, b) => b.averageRating - a.averageRating).slice(0, 3)
+    res.status(200).json(booksList);
+  })
+
+  .catch(error => res.status(401).json(error.message))
 }
 
 

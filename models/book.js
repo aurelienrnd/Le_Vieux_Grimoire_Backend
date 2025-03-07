@@ -13,8 +13,9 @@ const bookSchema = mongoose.Schema({
     {
       userId:{type: String}, // identifiant MongoDB unique de l'utilisateur qui a noté le livre
       grade: {type: Number} // note donnée à un livre
-    } // note moyenne du livre
-  ]
+    }
+  ],
+  averageRating: {type: Number} // note moyenne du livre
 });
 
 module.exports = mongoose.model('Book', bookSchema); // Crée un modèle basé sur le schéma et l'export
