@@ -3,8 +3,8 @@ const express = require('express');
 // import controleurs
 const userControl = require('../controllers/user');
 
-
-const router = express.Router() // creation du routeur
+// creation du routeur
+const router = express.Router() 
 
 // Liste routes
 router.post('/signup', userControl.addOneUser);

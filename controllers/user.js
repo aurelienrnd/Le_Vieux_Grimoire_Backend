@@ -22,9 +22,11 @@ exports.addOneUser = (req, res, next) => {
       password: hash
     })
 
-
     user.save()
-    .then(() => res.status(201).json({message: "Profil créé"}))
+    .then(() => {
+      console.log('Utilisateur ajouté a la base de données');
+      res.status(201).json({message: "Profil créé"})
+    })
     .catch(error => res.status(400).json({error}))
   })
   .catch(error => res.status(400).json({error}))
@@ -57,6 +59,7 @@ exports.getOneUser = (req, res, next) => {
         return res.status(401).json({ message: 'Paire login/mot de passe incorrecte' });
       }
 
+      console.log('utilisateur connecté')
       res.status(200).json(
         {
           userId: user._id, 

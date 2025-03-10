@@ -13,8 +13,14 @@ const Book = require('../models/book');
  */
 exports.getAllBooks = (req, res, next) => {
   Book.find()
-  .then(books => res.status(200).json(books))
-  .catch(error => res.status(400).json({error}))
+  .then(books => {
+    console.log("La listes des livres a etait recuperé")
+    res.status(200).json(books)
+  })
+  .catch(error => {
+    console.log("La listes des n'a pas etait trouvée")
+    res.status(400).json({error})
+  })
 }
 
 
@@ -33,16 +39,20 @@ exports.getOneBook = (req, res, next) => {
 
     // Si le livre n'existe pas, retourner une erreur 404
     if(!book){
-      return res.status(404).json({ error: "Ce livre n'existe pas" });
+      console.log("Le livre n'a pas etait trouvé dans la base de donnée");
+      return res.status(400).json({ error: "Ce livre n'existe pas" });
     }
 
+    console.log('Le livre a etait recuperé');
     res.status(200).json(book)
   })
-  .catch(error => res.status(400).json({error}))
+  .catch(error => {
+    res.status(409).json(error.message)
+  })
 }
 
 
-/** Capture et enregistre l'image, analyse le livre transformé en chaîne de caractères, 
+/** Capture et enregistre l'images, analyse le livre transformé en chaîne de caractères, 
   l'enregistre dans la base de données en définissant correctement son imageUrl.
   Initialise la note moyenne du livre à 0 et le rating avec un tableau vide. 
   Remarquez que le corps de la requête initiale est vide ; lorsque Multer est ajouté, 
@@ -68,12 +78,17 @@ exports.addOneBook = (req, res, next) => {
   const book = new Book({ 
     ...reqData,
     userId: req.auth.userId,
-    imageUrl:`${req.protocol}://${req.get('host')}/image/${req.file.filename}`
+    imageUrl:`${req.protocol}://${req.get('host')}/images/${req.file.filename}`
   })
   
   book.save()
-  .then(() => res.status(201).json({message:'Livre ajouté'}))
-  .catch(error => {res.status(400).json( error.message )})
+  .then(() => {
+    console.log('Le livre a etait ajouté')
+    res.status(201).json({message:'Livre ajouté'})
+  })
+  .catch(error => {
+    res.status(400).json( error.message )
+  })
 }
 
 
@@ -95,7 +110,7 @@ exports.updateOneBook = (req, res, next) => {
   // Si la requête est passée par Multer, ont la transforme en objet JS et ajoute le lien du fichier 
   const dataUpdate = req.file ? {
     ...JSON.parse(req.body.book),
-    imageUrl: `${req.protocol}://${req.get('host')}/image/${req.file.filename}`,
+    imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
   } : {
     ...req.body,
   };
@@ -106,14 +121,19 @@ exports.updateOneBook = (req, res, next) => {
 
     // Si le livre n'est pas trouvé, alors on retourne une erreur
     if (!book) {
+      console.log("Le livre n'a pas etait trouvé dans la base de donnée");
       return res.status(404).json({ message: "Ce livre n'existe pas" });
     }
 
     // Modification des données contenues dans book
     return Book.updateOne({ _id: req.params.id }, { ...dataUpdate })
   })
-  .then( res.status(200).json({ message: "Livre modifié" }))
-  .catch(error => { res.status(500).json({ error: error.message })});
+  .then( () => {
+    res.status(200).json({ message: "Livre modifié" })
+  })
+  .catch(error => {
+    res.status(500).json({ error: error.message })
+  });
 } 
 
 
@@ -131,23 +151,29 @@ exports.delateOneBook = (req, res, next) => {
   .then(book => {
 
     // Si book est null, on renvoie une erreur 400
-    if(!book){ 
+    if(!book){
+      console.log("Ce livre n'existe pas");
       res.status(400).json({ error: "Ce livre n'existe pas" });
     }
 
     // Vérifie que l'userId du livre est le même que celui de la requête
     if(book.userId != req.auth.userId) {
+      console.log("Le userId du livre nest pas le meme que celui de la requete");
       return res.status(401).json('Not authorized')
     }
 
-    // Supprime le livre de la base de données
-    const delateFile = book.imageUrl.split('/image/')[1]
-    fs.unlink(`image/${delateFile}`, () => {
+    // Supprime le livre du serveur
+    const delateFile = book.imageUrl.split('/images/')[1]
+    fs.unlink(`images/${delateFile}`, () => {
+
+      // Supprime le livre de la base de données
       book.deleteOne()
-      .then(res.status(200).json("Suppression réussie"))
+      .then(() => {
+        console.log('Le livre a etait supprimé')
+        res.status(200).json("Suppression réussie")
+      })
       .catch(error => res.status(400).json({error}))
     })
-    
   })
   .catch(error => res.status(400).json({error}))
 }
@@ -173,20 +199,23 @@ exports.postRatting =  (req, res, next) => {
 
     // Si le livre n'est pas trouvé, alors je retourne une erreur
     if (!book) {
+      console.log('livre non trouvé');
       return res.status(400).json({ message: "Ce livre n'existe pas" });
     }
 
     // Comparaison de chaque userId du tableau ratings avec le userId de la requête
     book.ratings.forEach(rating => {
       if(rating.userId === req.auth.userId) {
+        console.log("l'utilisateur a deja note ce livre");
         return res.status(400).json({ message: "L'utilisateur a deja noté ce livre" });
       }
     })
     
-    // Si la note est comprise entre 0 et 5, alors on l'ajoute à book
-    if(req.body.rating > 0 && req.body.rating < 5){
+    // Si la note est comprise entre 0 et 5, alors on l'ajoute à book //TODO faut'il inclure ce cas?
+    if(req.body.rating >= 0 && req.body.rating <= 5){
       book.ratings.push({ userId : req.body.userId, grade : req.body.rating})
     } else {
+      console.log("la note n'est pas comprise entre 0 et 5");
       return res.status(400).json("La note doit être comprise entre 0 et 5")
     }
 
@@ -198,7 +227,10 @@ exports.postRatting =  (req, res, next) => {
     book.averageRating = parseFloat((index / book.ratings.length).toFixed(2))
 
     book.save()
-    .then(book => res.status(200).json(book))
+    .then(book => {
+      console.log("la note a etait ajoutée");
+      res.status(200).json(book)
+    })
     .catch(error => res.status(400).json({error}))
   })
   .catch(error => res.status(401).json({error}))
@@ -220,6 +252,8 @@ exports.getBestRatting = (req, res, next) => {
 
     // Trie la liste des livres et découpe les 3 premiers éléments
     const booksList = [...books].sort((a, b) => b.averageRating - a.averageRating).slice(0, 3)
+
+    console.log("les livres les mieux notés on etait recuperé");
     res.status(200).json(booksList);
   })
 

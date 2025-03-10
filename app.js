@@ -30,6 +30,6 @@ app.use((req, res, next) => {
 
 app.use('/api/books', booksRoutes); // Chemin vers le routeur Books
 app.use('/api/auth', userRoutes) // Chemin vers le routeur Auth
-app.use('/image', express.static(path.join(__dirname, 'image'))); //Chemin vers le dossier image
+app.use('/images', express.static(path.join(__dirname, 'images'))); //Chemin vers le dossier images
 
 module.exports = app;
