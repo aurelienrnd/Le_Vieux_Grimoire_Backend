@@ -2,31 +2,34 @@
 const multer = require("multer");
 const sharp = require("sharp");
 const path = require("path");
-const fs = require("fs").promises;
+const fs = require("fs").promises; //NOTE - ajout de .promises pour etre utiliser avec try catch
+// Import modèles
+const Book = require('../models/book');
+// Import fonction
+const {delateFile} = require('../functions');
 
 
 // Stockage en mémoire (RAM)
 const memoryStorage = multer.memoryStorage(); // Crée un espace de stockage temporaire
 const upload = multer({ storage: memoryStorage }); // Indique que Multer doit utiliser le memoryStorage
 
+//TODO Es ce un probleme ci j'utilise await sur ce fichier et then catch sur les autres ?
 
 /* Modifie la taille et le format de l'image puis la sauvegarde sur le serveur */
-const saveImage = async(req, res, filePath) => {
+async function saveImage(req, filePath) {
   try{
     await sharp(req.file.buffer)
-    .resize({ width: 206, height: 260, fit: "contain", background:'transparent' })
+    .resize({ width: 206, height: 260, fit: "contain", background:'transparent' }) //TODO - le reformatage de mon image est'elle corecte?
     .toFormat("webp")
     .toFile(filePath)
-  console.log("fichier ajouté")
+    console.log("fichier ajouté")
   } catch (error) {
     throw error
   }
 }
 
-//TODO Es ce un probleme ci j'utilise await sur ce fichier et then catch sur les autres ?
-
 /* Ajoute une image sur le serveur */
-const addImage = async(req, res, next) => {
+async function addImage(req) {
   try{
     // Renomme le nom du nouveau fichier dans la requête pour le réutiliser dans le middleware suivant
     const originaFileName = req.file.originalname.split(" ").join("_").split(".")[0] 
@@ -40,10 +43,8 @@ const addImage = async(req, res, next) => {
     await fs.mkdir(uploadDir, { recursive: true })
     console.log("folder images crée")
 
-    // TODO supprime l'encienne image
-
     // Sauvegarde une image sur le serveur
-    await saveImage(req, res, filePath)
+    await saveImage(req, filePath)
 
   } catch (error) {
     throw error
@@ -51,7 +52,7 @@ const addImage = async(req, res, next) => {
 }
 
 /* Test ci le fichier est bien une image */
-const testFile = (req, res, next) => {
+function testFile(req){
   switch (req.file.mimetype) {
     case "image/jpeg":
     case "image/jpg":
@@ -64,7 +65,6 @@ const testFile = (req, res, next) => {
     throw new Error("Format du fichier non supporté.");
   }
 }
-
 
 module.exports = async (req, res, next) => {
   try{
@@ -81,14 +81,20 @@ module.exports = async (req, res, next) => {
       console.log("Aucun fichier envoyé !")
       return next()
     }
-
-    // Test ci le fichier envoyer est une image, puis l'enregistre sur le serveur
-    testFile(req, res, next)
-    await addImage(req, res, next)
+    
+    // Si la requete possaide un param, c'est une modification, donc suppression du fichier precedent
+    if(req.params.id){
+      const book = await Book.findOne({ _id: req.params.id})
+      await delateFile(book, req)
+    } 
+  
+    // Test si le fichier envoyer est une image, puis l'enregistre sur le serveur
+    testFile(req)
+    await addImage(req)
     next()
 
   } catch (error) {
     console.error("Erreur:", error);
-    return res.status(401).json({ message: error.message });
+    res.status(401).json({ message: error.message });
   }
 }

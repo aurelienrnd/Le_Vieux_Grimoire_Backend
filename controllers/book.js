@@ -2,7 +2,8 @@
 const fs = require('fs');
 // Import modèles
 const Book = require('../models/book');
-
+// Import fonction
+const {findBook, userAuthorization, delateFile} = require('../functions.js')
 
 /** Renvoie un tableau de tous les livres de la base de données.
  * Méthode : GET 
@@ -38,10 +39,7 @@ exports.getOneBook = (req, res, next) => {
   .then(book => {
 
     // Si le livre n'existe pas, retourner une erreur 404
-    if(!book){
-      console.log("Le livre n'a pas etait trouvé dans la base de donnée");
-      return res.status(400).json({ error: "Ce livre n'existe pas" });
-    }
+    findBook(book)
 
     console.log('Le livre a etait recuperé');
     res.status(200).json(book)
@@ -119,11 +117,9 @@ exports.updateOneBook = (req, res, next) => {
   Book.findOne({ _id: req.params.id })
   .then(book => {
 
-    // Si le livre n'est pas trouvé, alors on retourne une erreur
-    if (!book) {
-      console.log("Le livre n'a pas etait trouvé dans la base de donnée");
-      return res.status(404).json({ message: "Ce livre n'existe pas" });
-    }
+    // Vérifie ci le livre existe puis ci sont utilisateur en est le createur
+    findBook(book)
+    userAuthorization(book, req)
 
     // Modification des données contenues dans book
     return Book.updateOne({ _id: req.params.id }, { ...dataUpdate })
@@ -150,30 +146,17 @@ exports.delateOneBook = (req, res, next) => {
   Book.findOne({ _id: req.params.id})
   .then(book => {
 
-    // Si book est null, on renvoie une erreur 400
-    if(!book){
-      console.log("Ce livre n'existe pas");
-      res.status(400).json({ error: "Ce livre n'existe pas" });
-    }
+    // Supprime l'image du serveur
+    delateFile(book,req)
 
-    // Vérifie que l'userId du livre est le même que celui de la requête
-    if(book.userId != req.auth.userId) {
-      console.log("Le userId du livre nest pas le meme que celui de la requete");
-      return res.status(401).json('Not authorized')
-    }
-
-    // Supprime le livre du serveur
-    const delateFile = book.imageUrl.split('/images/')[1]
-    fs.unlink(`images/${delateFile}`, () => {
-
-      // Supprime le livre de la base de données
-      book.deleteOne()
-      .then(() => {
-        console.log('Le livre a etait supprimé')
-        res.status(200).json("Suppression réussie")
-      })
-      .catch(error => res.status(400).json({error}))
+    // Supprime le livre de la base de données
+    book.deleteOne()
+    .then(() => {
+      console.log('Le livre a etait supprimé')
+      res.status(200).json("Suppression réussie")
     })
+    .catch(error => res.status(400).json({error}))
+    
   })
   .catch(error => res.status(400).json({error}))
 }
@@ -197,11 +180,8 @@ exports.postRatting =  (req, res, next) => {
   Book.findOne({ _id: req.params.id})
   .then(book => {
 
-    // Si le livre n'est pas trouvé, alors je retourne une erreur
-    if (!book) {
-      console.log('livre non trouvé');
-      return res.status(400).json({ message: "Ce livre n'existe pas" });
-    }
+    // Si le livre n'existe pas, retourner une erreur 404
+    findBook(book)
 
     // Comparaison de chaque userId du tableau ratings avec le userId de la requête
     book.ratings.forEach(rating => {
@@ -256,6 +236,5 @@ exports.getBestRatting = (req, res, next) => {
     console.log("les livres les mieux notés on etait recuperé");
     res.status(200).json(booksList);
   })
-
-  .catch(error => res.status(401).json(error.message))
+  .catch(error => res.status(401).json(error.message)) //TODO - pb affichage de mon erreur dans le front end
 }
