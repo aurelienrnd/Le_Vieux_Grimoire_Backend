@@ -185,7 +185,7 @@ exports.getBestRatting = async (req, res) => {
     const book = await Book.find();
 
     // Trie la liste des livres et découpe les 3 premiers éléments
-    const booksList = [...books]
+    const booksList = [...book]
       .sort((a, b) => b.averageRating - a.averageRating)
       .slice(0, 3);
 
