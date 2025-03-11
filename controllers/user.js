@@ -5,13 +5,10 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 
 /** Hachage du mot de passe de l'utilisateur et ajout de l'utilisateur à la base de données.
- * Méthode : POST
- * Point d'accès : /api/auth/signup
- * Authentification : Non requise
- * Body : { "email": "string", "password": "string" }
- * Réponse : { message: string }
+ * @param {Objet} req - Body { "email": "string", "password": "string" }
+ * @param {Objet} res - { message: string }
  */
-exports.addOneUser = async (req, res, next) => {
+exports.addOneUser = async (req, res) => {
   try {
     // Hachage du mot de passe X10
     const hash = await bcrypt.hash(req.body.password, 10);
@@ -31,15 +28,10 @@ exports.addOneUser = async (req, res, next) => {
 };
 
 /** Vérification des informations d'identification de l'utilisateur.
- * Renvoie l'_id de l'utilisateur depuis la base de données et un token web JSON signé
- * (contenant également l'_id de l'utilisateur).
- * Méthode : POST
- * Point d'accès : /api/auth/login
- * Authentification : Non requise
- * Body : { "email": "string", "password": "string" }
- * Réponse : { userId: string, token: string }
+ * @param {Objet} req - Body { "email": "string", "password": "string" }
+ * @param {Objet} res - { userId: string, token: string }
  */
-exports.getOneUser = async (req, res, next) => {
+exports.getOneUser = async (req, res) => {
   try {
     // Recherche de l'utilisateur avec l'email de la requête, si aucun n'est trouvé, une erreur est levée
     const user = await User.findOne({ email: req.body.email });

@@ -4,14 +4,16 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user');
 
 /** Décode le token en userId, puis l'ajoute à la requête
- * @param {Object} req - Informations du livre envoyées par l'utilisateur.
+ * @param {Object} req - Header : authorization
  * @param {Object} res - Erreur survenue depuis la base de données ou créée.
  * @param {function} next - Passage au middleware suivant.
  */
 module.exports = async (req, res, next) => {
   try {
-    // Récupération du token et envoi d'une réponse 401 si non trouvé
-    const token = req.headers.authorization.split(' ')[1];
+    // Récupération du token et envoi d'une erreur si non trouvé
+
+    const token = req.headers.authorization.split(' ')[1]; //TODO - ci le token et bear ne sont pas n'est pas present alor je dois faire un autre message?
+
     if (!token) {
       throw new Error('Token manquant');
     }

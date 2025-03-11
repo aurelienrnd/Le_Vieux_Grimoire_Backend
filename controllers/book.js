@@ -30,6 +30,8 @@ exports.getOneBook = async (req, res) => {
     const book = await Book.findOne({ _id: req.params.id });
     findBook(book);
 
+    console.log(book);
+
     console.log('Le livre a etait recuperé');
     res.status(200).json(book);
   } catch (error) {
@@ -48,12 +50,14 @@ exports.addOneBook = async (req, res) => {
     // Ont la transforme en objet JS car la requette est passé par Multer
     const reqData = JSON.parse(req.body.book);
 
-    //TODO A rajouter sur toute les requettes qui ecrive dans la dataBase?
-    //  Suppression des _id possiblement ajoutés dans la requête
-    delete reqData._id;
-    delete reqData._userId;
+    //TODO Suppression des _id possiblement ajoutés dans toute les requettes qui ecrive dans la dataBase ?
 
     //TODO Le créateur du livre peut-il noter le livre qu'il vient de créer ?
+    // Si l'utilisateur n'as pas renseigner de note alors on l'init a 0
+    if (!reqData.ratings) {
+      reqData.ratings = [{ userId: req.auth.userId, grade: 0 }];
+      reqData.averageRating = 0;
+    }
 
     // Crée un nouvel objet book avec userId et imageUrl à jour
     const book = new Book({
@@ -131,7 +135,7 @@ exports.delateOneBook = async (req, res) => {
 };
 
 /** Définit la note pour l'user ID fourni.
- * @param {Object} req - { "userId": "String", "rating": "Number" }, UrlParam
+ * @param {Object} req - Body: { "userId": "String", "rating": "Number" }, UrlParam
  * @param {Object} res - Un livre unique ou { error } en cas d'erreur.
  *
  */

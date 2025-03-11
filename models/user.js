@@ -8,12 +8,11 @@ const userSchema = mongoose.Schema({
     required: true,
     unique: true,
     validate: {
-      //NOTE - // Utilisation de la fonction Validator, car uniqueValidator n'est plus supporté par la dernière version de Mongoose.
+      //NOTE - Utilisation de la fonction Validator, car uniqueValidator n'est plus supporté par la dernière version de Mongoose.
       validator: async function (value) {
         const existingUser = await this.constructor.findOne({ email: value });
         return !existingUser;
       },
-      message: 'Cet email est déjà utilisé !',
     },
   },
   password: { type: String, required: true },
