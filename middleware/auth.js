@@ -12,7 +12,7 @@ module.exports = async (req, res, next) => {
   try {
     // Récupération du token et envoi d'une erreur si non trouvé
 
-    const token = req.headers.authorization.split(' ')[1]; //TODO - ci le token et bear ne sont pas n'est pas present alor je dois faire un autre message?
+    const token = req.headers.authorization.split(' ')[1];
 
     if (!token) {
       throw new Error('Token manquant');

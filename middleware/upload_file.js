@@ -24,7 +24,7 @@ async function saveImage(req, filePath) {
         height: 260,
         fit: 'contain',
         background: 'transparent',
-      }) //TODO - le reformatage de mon image est'elle corecte?
+      })
       .toFormat('webp')
       .toFile(filePath);
     console.log('fichier ajouté');

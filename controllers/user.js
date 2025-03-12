@@ -10,6 +10,8 @@ const User = require('../models/user');
  */
 exports.addOneUser = async (req, res) => {
   try {
+    // TODO - test l'adress email
+
     // Hachage du mot de passe X10
     const hash = await bcrypt.hash(req.body.password, 10);
 

@@ -43,7 +43,7 @@ router.get('/:id', bookControl.getOneBook);
  * Point d'accès : /api/books 
  * Authentification : Requise
  * Body : { book: string, image: file }
- * Réponse : { message: String } Verb
+ * Réponse : { message: String }
  */
 router.post('/', auth, uploadFile, bookControl.addOneBook);
 

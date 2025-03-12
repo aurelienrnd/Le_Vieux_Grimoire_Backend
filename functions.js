@@ -31,8 +31,6 @@ function userAuthorization(book, req) {
  */
 async function delateFile(book, req) {
   try {
-    // Vérifie ci le livre existe puis ci sont utilisateur en est le createur
-    findBook(book);
     userAuthorization(book, req);
 
     // Supprime le fichier du serveur

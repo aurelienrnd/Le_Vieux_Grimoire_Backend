@@ -52,7 +52,6 @@ exports.addOneBook = async (req, res) => {
 
     //TODO Suppression des _id possiblement ajoutés dans toute les requettes qui ecrive dans la dataBase ?
 
-    //TODO Le créateur du livre peut-il noter le livre qu'il vient de créer ?
     // Si l'utilisateur n'as pas renseigner de note alors on l'init a 0
     if (!reqData.ratings) {
       reqData.ratings = [{ userId: req.auth.userId, grade: 0 }];
@@ -121,6 +120,8 @@ exports.delateOneBook = async (req, res) => {
     // Utilisation du paramètre de la requête pour retrouver un livre
     const book = await Book.findOne({ _id: req.params.id });
 
+    // Vérifie ci le livre existe puis ci sont utilisateur en est le createur
+    findBook(book);
     // Supprime l'image du serveur
     delateFile(book, req);
 
@@ -137,7 +138,6 @@ exports.delateOneBook = async (req, res) => {
 /** Définit la note pour l'user ID fourni.
  * @param {Object} req - Body: { "userId": "String", "rating": "Number" }, UrlParam
  * @param {Object} res - Un livre unique ou { error } en cas d'erreur.
- *
  */
 exports.postRatting = async (req, res) => {
   try {
@@ -155,12 +155,11 @@ exports.postRatting = async (req, res) => {
       }
     });
 
-    // Si la note est comprise entre 0 et 5, alors on l'ajoute à book //TODO faut'il inclure ce cas?
     if (req.body.rating >= 0 && req.body.rating <= 5) {
       book.ratings.push({ userId: req.body.userId, grade: req.body.rating });
     } else {
       console.log("la note n'est pas comprise entre 0 et 5");
-      throw new Error('La note doit être comprise entre 0 et 5'); //TODO - pb affichage de mon erreur dans le front end
+      throw new Error('La note doit être comprise entre 0 et 5');
     }
 
     // Récupère chaque note des livres pour en faire la moyenne et l'arrondir
