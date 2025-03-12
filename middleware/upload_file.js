@@ -61,8 +61,30 @@ async function addImage(req) {
   }
 }
 
-/** Test ci le fichier est bien une image
+/** Test si les données du formulaire sont complettes
  * @param {Objet} req - Informations du livre envoyées par l'utilisateur
+ */
+function testBookData(req) {
+  // Verifie si la requette possaide le formulaire autrement une erreur est levé
+  if (req.body.book) {
+    const FormBook = JSON.parse(req.body.book);
+    // Verifie que chaque objet du formulaire est present
+    const keyFormBook = ['userId', 'title', 'author', 'year', 'genre'];
+    const keyformCheck = keyFormBook.every((key) =>
+      FormBook.hasOwnProperty(key)
+    );
+
+    // Si il manque un objet, une erreur est levé
+    if (!keyformCheck) {
+      throw new Error("la requette n'as pas de formulaire complet");
+    }
+  } else {
+    throw new Error("la requette n'as pas de formulaire book");
+  }
+}
+
+/** Vérifie si le fichier est bien une image
+ * @param {Object} req - Informations du fichier envoyées par l'utilisateur
  */
 function testFile(req) {
   switch (req.file.mimetype) {
@@ -74,7 +96,7 @@ function testFile(req) {
       break;
 
     default:
-      throw new Error('Format du fichier non supporté.');
+      throw new Error('Format du fichier non supporté');
   }
 }
 
@@ -104,7 +126,10 @@ module.exports = async (req, res, next) => {
       return next();
     }
 
-    // Si la requete possaide un param, c'est une modification, donc suppression du fichier precedent
+    // Vérifie que toutes les données du formulaire sont présentes avant d'enregistrer le fichier sur le serveur
+    testBookData(req);
+
+    // Si la requête possède un paramètre, c'est une modification, donc suppression du fichier précédent
     if (req.params.id) {
       const book = await Book.findOne({ _id: req.params.id });
       await delateFile(book, req);
