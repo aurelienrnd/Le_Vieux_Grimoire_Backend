@@ -10,7 +10,12 @@ const User = require('../models/user');
  */
 exports.addOneUser = async (req, res) => {
   try {
-    // TODO - test l'adress email
+    // Teste l'email, si invalide, retourne une erreur
+    const regex = /^[a-zA-Z0-9\-_.]+@[a-zA-Z]+\.[a-zA-Z]{2,6}$/;
+    const result = regex.test(req.body.email);
+    if (!result) {
+      throw new Error('Email non valid');
+    }
 
     // Hachage du mot de passe X10
     const hash = await bcrypt.hash(req.body.password, 10);

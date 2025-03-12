@@ -50,7 +50,9 @@ exports.addOneBook = async (req, res) => {
     // Ont la transforme en objet JS car la requette est passé par Multer
     const reqData = JSON.parse(req.body.book);
 
-    //TODO Suppression des _id possiblement ajoutés dans toute les requettes qui ecrive dans la dataBase ?
+    //  Suppression des _id possiblement ajoutés dans la requête
+    delete reqData._id;
+    delete reqData._userId;
 
     // Si l'utilisateur n'as pas renseigner de note alors on l'init a 0
     if (!reqData.ratings) {
@@ -99,6 +101,10 @@ exports.updateOneBook = async (req, res) => {
     // Vérifie ci le livre existe puis ci sont utilisateur en est le createur
     findBook(book);
     userAuthorization(book, req);
+
+    //  Suppression des _id possiblement ajoutés dans la requête
+    delete dataUpdate._id;
+    delete dataUpdate._userId;
 
     // Modification des données contenues dans book
     await book.updateOne({ ...dataUpdate });
