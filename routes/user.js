@@ -16,8 +16,8 @@ const router = express.Router();
 router.post('/signup', userControl.addOneUser);
 
 /** Vérification des informations d'identification de l'utilisateur.
- * Renvoie l'_id de l'utilisateur depuis la base de données et un token web JSON signé
- * (contenant également l'_id de l'utilisateur).
+ Renvoie l'_id de l'utilisateur depuis la base de données et un token web JSON signé
+ (contenant également l'_id de l'utilisateur).
  * Méthode : POST
  * Point d'accès : /api/auth/login
  * Authentification : Non requise

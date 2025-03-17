@@ -11,7 +11,10 @@ const {
   findBook,
   userAuthorization,
   delateFile,
+  trimRequest,
+  ratingValidation,
 } = require('../functions');
+const { isNumber } = require('chart.js/helpers');
 
 // Stockage en mémoire (RAM)
 const memoryStorage = multer.memoryStorage(); // Crée un espace de stockage temporaire
@@ -64,30 +67,46 @@ async function addImage(req) {
   }
 }
 
-/** Test si les données du formulaire sont complettes
+/** Test si les données du formulaire sont complettes avant de poster l'image
  * @param {Objet} req - Informations du livre envoyées par l'utilisateur
+ *
+ * @function trimRequest - Supprime les espaces avant et après les chaînes de caractères
+ * @function ratingValidation - Vérifie que la note est un nombre compris entre 0 et 5
  */
 function testBookData(req) {
-  // Verifie si la requette possaide le formulaire autrement une erreur est levé
-  if (req.body.book) {
-    const FormBook = JSON.parse(req.body.book);
+  try {
+    if (!req.body.book) {
+      console.log('No form in the request');
+      throw new Error('Bad Request');
+    }
 
-    // Verifie que chaque objet du formulaire est present
+    // Transfome le formulaire en objet js
+    const FormBook = JSON.parse(req.body.book);
+    trimRequest(FormBook);
+
+    // Verifie que chaque element du formulaire est present
     const keyFormBook = ['userId', 'title', 'author', 'year', 'genre'];
     const keyformCheck = keyFormBook.every((key) =>
       FormBook.hasOwnProperty(key)
     );
 
-    // Si il manque un objet ou si year n'est pas un nombre, une erreur est levé
-    if (!keyformCheck || Number(req.body.book.year) === NaN) {
-      console.log('The request is not comforme');
-      const error = new Error('Bad Request');
-      error.status = 400;
-      throw error;
+    // Si il manque un element, une valeur ou si year n'est pas un nombre, une erreur est levé
+    for (const key in FormBook) {
+      if (
+        FormBook[key] === '' ||
+        !keyformCheck ||
+        !isNumber(Number(FormBook.year))
+      ) {
+        console.log('The form in the request is not comforme');
+        throw (error = new Error('Bad Request'));
+      }
     }
-  } else {
-    console.log('the request is empty');
-    const error = new Error('Bad Request');
+
+    // Si la note est presente, on verifie qu'elle est bien un nombre entre 0 et 5
+    if (FormBook.ratings) {
+      ratingValidation(FormBook.ratings[0].grade);
+    }
+  } catch (error) {
     error.status = 400;
     throw error;
   }
@@ -99,7 +118,7 @@ function testBookData(req) {
 function testFile(req) {
   switch (req.file.mimetype) {
     case 'image/jpeg':
-    case 'image/jpg':
+    case 'image/jpg': // TODO jpg?
     case 'image/png':
     case 'image/webp':
       console.log('Image sent');

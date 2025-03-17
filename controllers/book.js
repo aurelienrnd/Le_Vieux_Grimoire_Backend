@@ -7,6 +7,7 @@ const {
   userAuthorization,
   delateFile,
   trimRequest,
+  ratingValidation,
 } = require('../functions.js');
 
 /** Renvoie un tableau de tous les livres de la base de données.
@@ -50,15 +51,24 @@ exports.getOneBook = async (req, res) => {
  */
 exports.addOneBook = async (req, res) => {
   try {
-    // Ont la transforme en objet JS car la requette est passé par Multer
+    // Transforme en objet JS car la requette est passé par Multer
     const reqData = JSON.parse(req.body.book);
 
     //  Suppression des _id possiblement ajoutés dans la requête
     delete reqData._id;
-    delete reqData._userId;
+    delete reqData.userId;
 
     //Supprime les espaces avant et après les données envoyées par l'utilisateur
     trimRequest(reqData);
+
+    // Si l'utilasateur n'as pas renseigner de note alors averageRating = 0, autrement on ajoute la note et l'user Id
+    if (!reqData.ratings) {
+      reqData.ratings = [];
+      reqData.averageRating = 0;
+    } else {
+      reqData.averageRating = reqData.ratings[0].grade;
+      reqData.ratings[0].userId = req.auth.userId;
+    }
 
     // Crée un nouvel objet book avec userId et imageUrl à jour
     const book = new Book({
@@ -81,8 +91,7 @@ exports.addOneBook = async (req, res) => {
  *
  * @function findBook - Verifie que le livre existe dans la base de donnée
  * @function userAuthorization - Verifie que l'utilisateur qui envoie la requette est le meme que celui qui creer le livre
- * @function trimRequest - Supprime les espaces avant et après les données envoyées par l'utilisateur
- * @function castError - Vérifie si erreur.message egale CastError, le paramId présent dans l'URL n'est pas un object valide de MongoDB
+ * @function castError - Vérifie si erreur.message egale CastError, l'objectId présent dans l'URL n'est pas un object valide de MongoDB
  */
 exports.updateOneBook = async (req, res) => {
   try {
@@ -103,12 +112,15 @@ exports.updateOneBook = async (req, res) => {
     findBook(book);
     userAuthorization(book, req);
 
-    //  Suppression des _id possiblement ajoutés dans la requête
+    //  Suppression des _id possiblement ajoutés dans la requête et du ratting pour que l'utilisateur ne puisse pas le modifier
     delete dataUpdate._id;
-    delete dataUpdate._userId;
+    delete dataUpdate.userId;
+    delete dataUpdate.ratings;
 
     //Supprime les espaces avant et après les données envoyées par l'utilisateur
     trimRequest(dataUpdate);
+
+    console.log(dataUpdate);
 
     // Modification des données contenues dans book
     await book.updateOne({ ...dataUpdate });
@@ -175,19 +187,13 @@ exports.postRatting = async (req, res) => {
     });
 
     // Si l'utilisateur n'as pas renseigner de note alors on l'init a 0
-    if (req.body.rating.trim() === '') {
-      req.body.rating.grade = 0;
+    if (req.body.rating === '') {
+      req.body.rating = 0;
     }
 
-    // Vérifie que la note est comprise entre 0 et 5
-    if (req.body.rating >= 0 && req.body.rating <= 5) {
-      book.ratings.push({ userId: req.auth.userId, grade: req.body.rating });
-    } else {
-      console.log('The rating is not between 0 and 5');
-      const error = new Error('Bad request');
-      error.status = 400;
-      throw error;
-    }
+    // Vérifie que la note est comprise entre 0 et 5 et ajoute la note et l'user Id
+    ratingValidation(req.body.rating);
+    book.ratings.push({ userId: req.auth.userId, grade: req.body.rating });
 
     // Récupère chaque note des livres pour en faire la moyenne et l'arrondir
     let index = 0;
@@ -225,4 +231,4 @@ exports.getBestRatting = async (req, res) => {
   }
 };
 
-//TODO - Vérifier les vulnérabilités avec npm audit
+//TODO - Vérifier les vulnérabilités avec npm audi

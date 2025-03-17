@@ -1,7 +1,9 @@
 // Import modules
 const fs = require('fs').promises; //NOTE - ajout de .promises pour etre utiliser avec try catch
 
-// Vérifie si erreur.message egale CastError, l'objectId présent dans l'URL n'est pas un object valide de MongoDB
+/** Vérifie si erreur.message egale CastError, l'objectId présent dans l'URL n'est pas un object valide de MongoDB
+ * @param {Object} error - Objet représentant l'erreur générée
+ */
 function castError(error) {
   if (error.name === 'CastError') {
     console.log('The parameter Id in the URL is not a valid MongoDB object');
@@ -15,7 +17,7 @@ function castError(error) {
  */
 function findBook(book) {
   if (!book) {
-    console.log('The book not found in the database');
+    console.log('Book not found in the database');
     const error = new Error('Not Found');
     error.status = 404;
     throw error;
@@ -39,14 +41,9 @@ function userAuthorization(book, req) {
 
 /** Supprime un fichier sur le serveur
  * @param {Objet} book - Les diférente information (String et Number) d'un livres
- * @param {Object} req - Informations du livre envoyées par l'utilisateur
- *
- * @function findBook Verifie que le livre existe dans la base de donnée
- * @function userAuthorization Verifie que l'utilisateur qui envoie la requette est le meme que celui qui creer le livre
  */
 async function delateFile(book) {
   try {
-    // Supprime le fichier du serveur
     const delateFile = book.imageUrl.split('/images/')[1];
     await fs.unlink(`images/${delateFile}`);
 
@@ -67,10 +64,21 @@ function trimRequest(reqData) {
   }
 }
 
+/** Veriffie que la note sois un nombre compris entre 0 et 5
+ * @param {String} rating - La note attribuée par l'utilisateur
+ */
+function ratingValidation(rating) {
+  if (Number(rating) < 0 || Number(rating) > 5 || isNaN(Number(rating))) {
+    console.log('The rating is not between 0 and 5');
+    throw new Error('Bad Request');
+  }
+}
+
 module.exports = {
   castError,
   findBook,
   userAuthorization,
   delateFile,
   trimRequest,
+  ratingValidation,
 };
