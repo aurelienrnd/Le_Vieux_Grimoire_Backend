@@ -1,13 +1,24 @@
 // Import modules
 const fs = require('fs').promises; //NOTE - ajout de .promises pour etre utiliser avec try catch
 
+// Vérifie si erreur.message egale CastError, l'objectId présent dans l'URL n'est pas un object valide de MongoDB
+function castError(error) {
+  if (error.name === 'CastError') {
+    console.log('The parameter Id in the URL is not a valid MongoDB object');
+    error.status = 404;
+    error.message = 'Not Found';
+  }
+}
+
 /** Verifie que le livre existe dans la base de donnée
  * @param {Objet} book - Les diférente information (String et Number) d'un livres
  */
 function findBook(book) {
   if (!book) {
-    console.log("Le livre n'a pas etait trouvé dans la base de donnée");
-    throw new Error("Ce livre n'existe pas");
+    console.log('The book not found in the database');
+    const error = new Error('Not Found');
+    error.status = 404;
+    throw error;
   }
 }
 
@@ -17,8 +28,12 @@ function findBook(book) {
  */
 function userAuthorization(book, req) {
   if (book.userId != req.auth.userId) {
-    console.log('Le userId du livre nest pas le meme que celui de la requete');
-    throw new Error('Not authorized');
+    console.log(
+      'The userId of the book is not the same as the one in the request'
+    );
+    const error = new Error('unauthorized request');
+    error.status = 403;
+    throw error;
   }
 }
 
@@ -29,18 +44,33 @@ function userAuthorization(book, req) {
  * @function findBook Verifie que le livre existe dans la base de donnée
  * @function userAuthorization Verifie que l'utilisateur qui envoie la requette est le meme que celui qui creer le livre
  */
-async function delateFile(book, req) {
+async function delateFile(book) {
   try {
-    userAuthorization(book, req);
-
     // Supprime le fichier du serveur
     const delateFile = book.imageUrl.split('/images/')[1];
     await fs.unlink(`images/${delateFile}`);
 
-    console.log('Le fichier a etait supprimé');
+    console.log('File deleted');
   } catch (error) {
     throw error;
   }
 }
 
-module.exports = { findBook, userAuthorization, delateFile };
+/** Supprime les espaces avant et après les chaînes de caractères
+ * @param {Object} reqData - Les informations envoyées par l'utilisateur
+ */
+function trimRequest(reqData) {
+  for (const key in reqData) {
+    if (typeof reqData[key] === 'string') {
+      reqData[key] = reqData[key].trim();
+    }
+  }
+}
+
+module.exports = {
+  castError,
+  findBook,
+  userAuthorization,
+  delateFile,
+  trimRequest,
+};

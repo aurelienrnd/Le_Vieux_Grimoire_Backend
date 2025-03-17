@@ -6,7 +6,12 @@ const fs = require('fs').promises; //NOTE - ajout de .promises pour etre utilise
 // Import modèles
 const Book = require('../models/book');
 // Import fonction
-const { delateFile } = require('../functions');
+const {
+  castError,
+  findBook,
+  userAuthorization,
+  delateFile,
+} = require('../functions');
 
 // Stockage en mémoire (RAM)
 const memoryStorage = multer.memoryStorage(); // Crée un espace de stockage temporaire
@@ -27,7 +32,6 @@ async function saveImage(req, filePath) {
       })
       .toFormat('webp')
       .toFile(filePath);
-    console.log('fichier ajouté');
   } catch (error) {
     throw error;
   }
@@ -52,7 +56,6 @@ async function addImage(req) {
 
     // Vérifie que le dossier où enregistrer le fichier existe et le crée si besoin
     await fs.mkdir(uploadDir, { recursive: true });
-    console.log('folder images crée');
 
     // Sauvegarde une image sur le serveur
     await saveImage(req, filePath);
@@ -68,18 +71,25 @@ function testBookData(req) {
   // Verifie si la requette possaide le formulaire autrement une erreur est levé
   if (req.body.book) {
     const FormBook = JSON.parse(req.body.book);
+
     // Verifie que chaque objet du formulaire est present
     const keyFormBook = ['userId', 'title', 'author', 'year', 'genre'];
     const keyformCheck = keyFormBook.every((key) =>
       FormBook.hasOwnProperty(key)
     );
 
-    // Si il manque un objet, une erreur est levé
-    if (!keyformCheck) {
-      throw new Error("la requette n'as pas de formulaire complet");
+    // Si il manque un objet ou si year n'est pas un nombre, une erreur est levé
+    if (!keyformCheck || Number(req.body.book.year) === NaN) {
+      console.log('The request is not comforme');
+      const error = new Error('Bad Request');
+      error.status = 400;
+      throw error;
     }
   } else {
-    throw new Error("la requette n'as pas de formulaire book");
+    console.log('the request is empty');
+    const error = new Error('Bad Request');
+    error.status = 400;
+    throw error;
   }
 }
 
@@ -92,11 +102,14 @@ function testFile(req) {
     case 'image/jpg':
     case 'image/png':
     case 'image/webp':
-      console.log('une image est envoyé !');
+      console.log('Image sent');
       break;
 
     default:
-      throw new Error('Format du fichier non supporté');
+      console.log('Unsupported file');
+      const error = new Error('Bad Request');
+      error.status = 400;
+      throw error;
   }
 }
 
@@ -105,9 +118,13 @@ function testFile(req) {
  * @param {Object} res - Erreur survenue depuis la base de données ou créée.
  * @param {function} next - Passage au middleware suivant.
  *
+ * @function testBookData - Test si les données du formulaire sont complettes.
+ * @function findBook - Vérifie que le livre existe dans la base de données.
+ * @function userAuthorization - Vérifie que l'utilisateur qui envoie la requête est le même que celui qui crée le livre.
  * @function deleteFile - Supprime un fichier de la base de données.
  * @function testFile - Vérifie si le fichier est bien une image.
  * @function addImage - Ajoute une image sur le serveur.
+ * @function castError - Vérifie si erreur.message egale CastError, l'objectId présent dans l'URL n'est pas un object valide de MongoDB
  */
 module.exports = async (req, res, next) => {
   try {
@@ -122,25 +139,28 @@ module.exports = async (req, res, next) => {
 
     // Test la presence d'un fichier
     if (!req.file) {
-      console.log('Aucun fichier envoyé !');
+      console.log('No file sent');
       return next();
     }
 
-    // Vérifie que toutes les données du formulaire sont présentes avant d'enregistrer le fichier sur le serveur
+    // Test si le fichier envoyer est une image puis vérifie que toutes les données du formulaire sont présentes
+    testFile(req);
     testBookData(req);
 
-    // Si la requête possède un paramètre, c'est une modification, donc suppression du fichier précédent
+    // Si la requête possède un paramètre, c'est une modification donc:
     if (req.params.id) {
+      // Vérifie que le livre existe et que l'utilisateur est autorisé, puis supprime l'image precedente du serveur.
       const book = await Book.findOne({ _id: req.params.id });
-      await delateFile(book, req);
+      findBook(book);
+      userAuthorization(book, req);
+      await delateFile(book);
     }
 
-    // Test si le fichier envoyer est une image, puis l'enregistre sur le serveur
-    testFile(req);
+    // Enregistre l'image sur le serveur
     await addImage(req);
     next();
   } catch (error) {
-    console.error('Erreur:', error);
-    res.status(400).json({ message: error.message });
+    castError(error);
+    res.status(error.status || 400).json({ message: error.message });
   }
 };

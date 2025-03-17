@@ -14,7 +14,7 @@ exports.addOneUser = async (req, res) => {
     const regex = /^[a-zA-Z0-9\-_.]+@[a-zA-Z]+\.[a-zA-Z]{2,6}$/;
     const result = regex.test(req.body.email);
     if (!result) {
-      throw new Error('Email non valid');
+      throw new Error('Invalid email format');
     }
 
     // Hachage du mot de passe X10
@@ -27,9 +27,9 @@ exports.addOneUser = async (req, res) => {
     });
 
     await user.save();
-    console.log('Utilisateur ajouté a la base de données');
-    res.status(201).json({ message: 'Profil créé' });
+    res.status(201).json({ message: 'Profile created' });
   } catch (error) {
+    console.log(error.message);
     res.status(400).json({ error: error.message });
   }
 };
@@ -43,16 +43,15 @@ exports.getOneUser = async (req, res) => {
     // Recherche de l'utilisateur avec l'email de la requête, si aucun n'est trouvé, une erreur est levée
     const user = await User.findOne({ email: req.body.email });
     if (!user) {
-      throw new Error({ message: 'Paire login/mot de passe incorrecte' });
+      throw new Error('Incorrect login or password');
     }
 
     // Déchiffrement et comparaison du mot de passe envoyé, si la comparaison echoue, une erreur est levée
     const valid = await bcrypt.compare(req.body.password, user.password);
     if (!valid) {
-      throw new Error({ message: 'Paire login/mot de passe incorrecte' });
+      throw new Error('Incorrect login or password');
     }
 
-    console.log('utilisateur connecté');
     res.status(200).json({
       userId: user._id,
       token: jwt.sign({ userId: user._id }, 'TOKEN-DE-TEST', {

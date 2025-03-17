@@ -11,11 +11,10 @@ const User = require('../models/user');
 module.exports = async (req, res, next) => {
   try {
     // Récupération du token et envoi d'une erreur si non trouvé
-
     const token = req.headers.authorization.split(' ')[1];
-
     if (!token) {
-      throw new Error('Token manquant');
+      console.log('Empty authorization');
+      throw new Error();
     }
 
     // Décodage du token en userId
@@ -25,13 +24,15 @@ module.exports = async (req, res, next) => {
     // Recherche du userId dans la base de données et envoi d'une réponse si l'utilisateur n'est pas trouvé
     const user = await User.findOne({ _id: userId });
     if (!user) {
-      throw new Error({ error: 'Utilisateur non trouvé' });
+      console.log('user not found');
+      throw new Error();
     }
 
     // Ajout de userId à la requête
     req.auth = { userId: userId };
     next();
   } catch (error) {
-    res.status(401).json({ error: error.message });
+    console.log(error.message);
+    res.status(401).json({ error: 'Not authorized' });
   }
 };

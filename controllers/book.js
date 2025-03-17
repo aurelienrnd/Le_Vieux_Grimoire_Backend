@@ -1,28 +1,33 @@
 // Import modèles
 const Book = require('../models/book');
 // Import fonction
-const { findBook, userAuthorization, delateFile } = require('../functions.js');
+const {
+  castError,
+  findBook,
+  userAuthorization,
+  delateFile,
+  trimRequest,
+} = require('../functions.js');
 
 /** Renvoie un tableau de tous les livres de la base de données.
  * @param {Objet} req - Body: Undefined
- * @param {Array} res - Un tableau de livres ou { error } en cas d'erreur.
+ * @param {Array} res - Un tableau de livres ou { error }
  */
 exports.getAllBooks = async (req, res) => {
   try {
     const books = await Book.find();
-    console.log('La listes des livres a etait recuperé');
     res.status(200).json(books);
   } catch (error) {
-    console.log("La listes des livres n'a pas etait trouvée");
-    res.status(404).json({ error: error.message });
+    res.status(400).json({ error: error.message });
   }
 };
 
 /** Renvoie le livre avec l’_id fourni.
  * @param {Undefined} req - Body: Undefined
- * @param {Object} res - Un livre unique ou { message: String } en cas d'erreur.
+ * @param {Object} res - Un livre unique ou { error }
  *
  * @function findOne - Verifie que le livre existe dans la base de donnée
+ * @function castError - Vérifie si erreur.message egale CastError, l'objectId présent dans l'URL n'est pas un object valide de MongoDB
  */
 exports.getOneBook = async (req, res) => {
   try {
@@ -30,20 +35,18 @@ exports.getOneBook = async (req, res) => {
     const book = await Book.findOne({ _id: req.params.id });
     findBook(book);
 
-    console.log(book);
-
-    console.log('Le livre a etait recuperé');
     res.status(200).json(book);
   } catch (error) {
-    res.status(404).json({ error: error.message });
+    castError(error);
+    res.status(error.status || 400).json({ error: error.message });
   }
 };
 
 /** Ajoute un livre a la base de donnée
  * @param {Object} req - Body: {book: string et number , image: file},  UrlParam
- * @param {Object} res - { message: String } Verb
+ * @param {Object} res - { message: String } ou { error }
  *
- * @function findOne - Verifie que le livre existe dans la base de donnée
+ * @function trimRequest - Supprime les espaces avant et après les données envoyées par l'utilisateur
  */
 exports.addOneBook = async (req, res) => {
   try {
@@ -54,11 +57,8 @@ exports.addOneBook = async (req, res) => {
     delete reqData._id;
     delete reqData._userId;
 
-    // Si l'utilisateur n'as pas renseigner de note alors on l'init a 0
-    if (!reqData.ratings) {
-      reqData.ratings = [{ userId: req.auth.userId, grade: 0 }];
-      reqData.averageRating = 0;
-    }
+    //Supprime les espaces avant et après les données envoyées par l'utilisateur
+    trimRequest(reqData);
 
     // Crée un nouvel objet book avec userId et imageUrl à jour
     const book = new Book({
@@ -69,10 +69,9 @@ exports.addOneBook = async (req, res) => {
 
     // Sauvegarde le livre dans la data base
     await book.save();
-    console.log('Le livre a etait ajouté');
-    res.status(201).json({ message: 'Livre ajouté' });
+    res.status(201).json({ message: 'Book added' });
   } catch (error) {
-    res.status(403).json({ error: error.message });
+    res.status(400).json({ error: error.message });
   }
 };
 
@@ -82,6 +81,8 @@ exports.addOneBook = async (req, res) => {
  *
  * @function findBook - Verifie que le livre existe dans la base de donnée
  * @function userAuthorization - Verifie que l'utilisateur qui envoie la requette est le meme que celui qui creer le livre
+ * @function trimRequest - Supprime les espaces avant et après les données envoyées par l'utilisateur
+ * @function castError - Vérifie si erreur.message egale CastError, le paramId présent dans l'URL n'est pas un object valide de MongoDB
  */
 exports.updateOneBook = async (req, res) => {
   try {
@@ -106,12 +107,16 @@ exports.updateOneBook = async (req, res) => {
     delete dataUpdate._id;
     delete dataUpdate._userId;
 
+    //Supprime les espaces avant et après les données envoyées par l'utilisateur
+    trimRequest(dataUpdate);
+
     // Modification des données contenues dans book
     await book.updateOne({ ...dataUpdate });
 
-    res.status(200).json({ message: 'Livre modifié' });
+    res.status(200).json({ message: 'Book updated' });
   } catch (error) {
-    res.status(403).json({ error: error.message });
+    castError(error);
+    res.status(error.status || 400).json({ error: error.message });
   }
 };
 
@@ -120,52 +125,68 @@ exports.updateOneBook = async (req, res) => {
  * @param {Object} res - { message: string } ou { error }
  *
  * @function delateFile Supprime un fichier sur le serveur
+ * @function findBook - Verifie que le livre existe dans la base de donnée
+ * @function userAuthorization - Verifie que l'utilisateur qui envoie la requette est le meme que celui qui creer le livre
+ * @function castError - Vérifie si erreur.message egale CastError, l'objectId présent dans l'URL n'est pas un object valide de MongoDB
  */
 exports.delateOneBook = async (req, res) => {
   try {
     // Utilisation du paramètre de la requête pour retrouver un livre
     const book = await Book.findOne({ _id: req.params.id });
 
-    // Vérifie ci le livre existe puis ci sont utilisateur en est le createur
+    // Vérifie que le livre existe et que l'utilisateur est autorisé, puis supprime l'image du serveur.
     findBook(book);
-    // Supprime l'image du serveur
-    delateFile(book, req);
+    userAuthorization(book, req);
+    await delateFile(book);
 
     // Supprime le livre de la base de données
     await book.deleteOne();
 
-    console.log('Le livre a etait supprimé');
-    res.status(200).json('Suppression réussie');
+    res.status(200).json('Book delated');
   } catch (error) {
-    res.status(403).json({ error: error.message });
+    castError(error);
+    res.status(error.status || 400).json({ error: error.message });
   }
 };
 
 /** Définit la note pour l'user ID fourni.
  * @param {Object} req - Body: { "userId": "String", "rating": "Number" }, UrlParam
- * @param {Object} res - Un livre unique ou { error } en cas d'erreur.
+ * @param {Object} res - Un livre unique ou { error }.
+ *
+ * @function findBook - Verifie que le livre existe dans la base de donnée
+ * @function castError - Vérifie si erreur.message egale CastError, l'objectId présent dans l'URL n'est pas un object valide de MongoDB
  */
 exports.postRatting = async (req, res) => {
   try {
     // Utilisation du paramètre de la requête pour retrouver un livre
     const book = await Book.findOne({ _id: req.params.id });
 
-    // Si le livre n'existe pas, retourner une erreur 404
+    // Si le livre n'existe pas, retourner une erreur
     findBook(book);
 
     // Comparaison de chaque userId du tableau ratings avec le userId de la requête
     book.ratings.forEach((rating) => {
       if (rating.userId === req.auth.userId) {
-        console.log("l'utilisateur a deja note ce livre");
-        throw new Error("L'utilisateur a deja noté ce livre");
+        console.log('User has already rated this book');
+        const error = new Error('unauthorized request');
+        error.status = 403;
+        throw error;
       }
     });
 
+    // Si l'utilisateur n'as pas renseigner de note alors on l'init a 0
+    if (req.body.rating.trim() === '') {
+      req.body.rating.grade = 0;
+    }
+
+    // Vérifie que la note est comprise entre 0 et 5
     if (req.body.rating >= 0 && req.body.rating <= 5) {
-      book.ratings.push({ userId: req.body.userId, grade: req.body.rating });
+      book.ratings.push({ userId: req.auth.userId, grade: req.body.rating });
     } else {
-      console.log("la note n'est pas comprise entre 0 et 5");
-      throw new Error('La note doit être comprise entre 0 et 5');
+      console.log('The rating is not between 0 and 5');
+      const error = new Error('Bad request');
+      error.status = 400;
+      throw error;
     }
 
     // Récupère chaque note des livres pour en faire la moyenne et l'arrondir
@@ -177,10 +198,10 @@ exports.postRatting = async (req, res) => {
 
     await book.save();
 
-    console.log('la note a etait ajoutée');
     res.status(201).json(book);
   } catch (error) {
-    res.status(403).json({ error: error.message });
+    castError(error);
+    res.status(error.status || 400).json({ error: error.message });
   }
 };
 
@@ -198,9 +219,10 @@ exports.getBestRatting = async (req, res) => {
       .sort((a, b) => b.averageRating - a.averageRating)
       .slice(0, 3);
 
-    console.log('les livres les mieux notés on etait recuperé');
     res.status(200).json(booksList);
   } catch (error) {
-    res.status(404).json({ error: error.message });
+    res.status(400).json({ error: error.message });
   }
 };
+
+//TODO - Vérifier les vulnérabilités avec npm audit
