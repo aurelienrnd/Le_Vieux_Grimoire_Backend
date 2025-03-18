@@ -14,7 +14,8 @@ exports.addOneUser = async (req, res) => {
     const regex = /^[a-zA-Z0-9\-_.]+@[a-zA-Z0-9]+\.[a-zA-Z]{2,6}$/;
     const result = regex.test(req.body.email);
     if (!result) {
-      throw new Error('Invalid email format');
+      console.log('invalid email format');
+      throw new Error();
     }
 
     // Hachage du mot de passe X10
@@ -29,8 +30,7 @@ exports.addOneUser = async (req, res) => {
     await user.save();
     res.status(201).json({ message: 'Profile created' });
   } catch (error) {
-    console.log(error.message);
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: 'Invalid email' });
   }
 };
 
