@@ -11,7 +11,7 @@ const User = require('../models/user');
 exports.addOneUser = async (req, res) => {
   try {
     // Teste l'email, si invalide, retourne une erreur
-    const regex = /^[a-zA-Z0-9\-_.]+@[a-zA-Z]+\.[a-zA-Z]{2,6}$/;
+    const regex = /^[a-zA-Z0-9\-_.]+@[a-zA-Z0-9]+\.[a-zA-Z]{2,6}$/;
     const result = regex.test(req.body.email);
     if (!result) {
       throw new Error('Invalid email format');

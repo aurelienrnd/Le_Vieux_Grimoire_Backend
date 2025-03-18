@@ -1,7 +1,7 @@
 // import modules
 const express = require('express');
 const mongoose = require('mongoose');
-const path = require('path'); // TODO expliqué
+const path = require('path');
 
 // Import routes
 const booksRoutes = require('./routes/books');

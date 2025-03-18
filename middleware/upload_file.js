@@ -13,6 +13,7 @@ const {
   delateFile,
   trimRequest,
   ratingValidation,
+  testForm,
 } = require('../functions');
 const { isNumber } = require('chart.js/helpers');
 
@@ -71,6 +72,7 @@ async function addImage(req) {
  * @param {Objet} req - Informations du livre envoyées par l'utilisateur
  *
  * @function trimRequest - Supprime les espaces avant et après les chaînes de caractères
+ * @function testForm - Vérifie si le formulaire est complet
  * @function ratingValidation - Vérifie que la note est un nombre compris entre 0 et 5
  */
 function testBookData(req) {
@@ -84,23 +86,8 @@ function testBookData(req) {
     const FormBook = JSON.parse(req.body.book);
     trimRequest(FormBook);
 
-    // Verifie que chaque element du formulaire est present
-    const keyFormBook = ['userId', 'title', 'author', 'year', 'genre'];
-    const keyformCheck = keyFormBook.every((key) =>
-      FormBook.hasOwnProperty(key)
-    );
-
-    // Si il manque un element, une valeur ou si year n'est pas un nombre, une erreur est levé
-    for (const key in FormBook) {
-      if (
-        FormBook[key] === '' ||
-        !keyformCheck ||
-        !isNumber(Number(FormBook.year))
-      ) {
-        console.log('The form in the request is not comforme');
-        throw (error = new Error('Bad Request'));
-      }
-    }
+    // Test si le formulaire est complet
+    testForm(FormBook);
 
     // Si la note est presente, on verifie qu'elle est bien un nombre entre 0 et 5
     if (FormBook.ratings) {
@@ -118,7 +105,7 @@ function testBookData(req) {
 function testFile(req) {
   switch (req.file.mimetype) {
     case 'image/jpeg':
-    case 'image/jpg': // TODO jpg?
+    case 'image/jpg':
     case 'image/png':
     case 'image/webp':
       console.log('Image sent');

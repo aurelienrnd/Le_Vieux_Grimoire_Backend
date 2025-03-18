@@ -77,7 +77,6 @@ server.on('error', errorHandler);
 server.on('listening', () => {
   // Retourne l’adresse et le port puis déterminer la manière dont le serveur écoute les connexions.
   const address = server.address();
-  // TODO - expliquer cette fonction
   const bind = typeof address === 'string' ? 'pipe ' + address : 'port ' + port;
   console.log('Listening on ' + bind);
 });

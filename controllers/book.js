@@ -8,6 +8,7 @@ const {
   delateFile,
   trimRequest,
   ratingValidation,
+  testForm,
 } = require('../functions.js');
 
 /** Renvoie un tableau de tous les livres de la base de données.
@@ -89,21 +90,33 @@ exports.addOneBook = async (req, res) => {
  * @param {Object} req - Body: { book: string, image: file }, UrlParam
  * @param {Object} res - { message: String }
  *
+ * @function trimRequest - Supprime les espaces avant et après les données envoyées par l'utilisateur
+ * @function testForm - Vérifie si le formulaire est complet
  * @function findBook - Verifie que le livre existe dans la base de donnée
  * @function userAuthorization - Verifie que l'utilisateur qui envoie la requette est le meme que celui qui creer le livre
  * @function castError - Vérifie si erreur.message egale CastError, l'objectId présent dans l'URL n'est pas un object valide de MongoDB
  */
 exports.updateOneBook = async (req, res) => {
   try {
+    let dataUpdate;
     // Si la requête est passée par Multer, ont la transforme en objet JS et ajoute le lien du fichier
-    const dataUpdate = req.file
-      ? {
-          ...JSON.parse(req.body.book),
-          imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
-        }
-      : {
-          ...req.body,
-        };
+    if (req.file) {
+      dataUpdate = {
+        ...JSON.parse(req.body.book),
+        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
+      };
+      trimRequest(dataUpdate);
+    }
+    // Si la requête n'est passée par Multer, on test le formulaire
+    else {
+      if (!req.body) {
+        console.log('No form in the request');
+        throw new Error('Bad Request');
+      }
+      dataUpdate = { ...req.body };
+      trimRequest(dataUpdate);
+      testForm(dataUpdate);
+    }
 
     // Récupère le livre correspondant à params.id dans la base de données
     const book = await Book.findOne({ _id: req.params.id });
@@ -112,15 +125,10 @@ exports.updateOneBook = async (req, res) => {
     findBook(book);
     userAuthorization(book, req);
 
-    //  Suppression des _id possiblement ajoutés dans la requête et du ratting pour que l'utilisateur ne puisse pas le modifier
+    // Suppression des _id possiblement ajoutés dans la requête et du ratting pour que l'utilisateur ne puisse pas le modifier
     delete dataUpdate._id;
     delete dataUpdate.userId;
     delete dataUpdate.ratings;
-
-    //Supprime les espaces avant et après les données envoyées par l'utilisateur
-    trimRequest(dataUpdate);
-
-    console.log(dataUpdate);
 
     // Modification des données contenues dans book
     await book.updateOne({ ...dataUpdate });
@@ -230,5 +238,3 @@ exports.getBestRatting = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
-
-//TODO - Vérifier les vulnérabilités avec npm audi

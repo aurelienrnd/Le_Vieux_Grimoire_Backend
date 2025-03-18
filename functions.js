@@ -74,6 +74,23 @@ function ratingValidation(rating) {
   }
 }
 
+/** Verifie que chaque element du formulaire est present
+ * @param {Object} FormBook - Les informations envoyées par l'utilisateur
+ */
+function testForm(FormBook) {
+  // Verifie que chaque element du formulaire est present
+  const keyFormBook = ['userId', 'title', 'author', 'year', 'genre'];
+  const keyformCheck = keyFormBook.every((key) => FormBook.hasOwnProperty(key));
+
+  // Si il manque un element, une valeur ou si year n'est pas un nombre, une erreur est levé
+  for (const key in FormBook) {
+    if (FormBook[key] === '' || !keyformCheck || isNaN(Number(FormBook.year))) {
+      console.log('The form in the request is not comforme');
+      throw (error = new Error('Bad Request'));
+    }
+  }
+}
+
 module.exports = {
   castError,
   findBook,
@@ -81,4 +98,5 @@ module.exports = {
   delateFile,
   trimRequest,
   ratingValidation,
+  testForm,
 };
