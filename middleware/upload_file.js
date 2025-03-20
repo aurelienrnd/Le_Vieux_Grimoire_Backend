@@ -15,7 +15,6 @@ const {
   ratingValidation,
   testForm,
 } = require('../functions');
-const { isNumber } = require('chart.js/helpers');
 
 // Stockage en mémoire (RAM)
 const memoryStorage = multer.memoryStorage(); // Crée un espace de stockage temporaire
