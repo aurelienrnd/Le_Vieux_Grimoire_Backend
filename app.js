@@ -1,4 +1,5 @@
 // import modules
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
@@ -13,7 +14,7 @@ const app = express();
 // Connexion à MongoDB
 mongoose
   .connect(
-    'mongodb+srv://aurelien:exoOPen@cluster0.qxu0g.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
+    process.env.MONGO_URI + 'retryWrites=true&w=majority&appName=Cluster0'
   )
   .then(() => console.log('Connexion à MongoDB réussie !'))
   .catch(() => console.log('Connexion à MongoDB échouée !'));
